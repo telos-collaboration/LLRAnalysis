@@ -97,9 +97,10 @@ def ReadOutput(file):
                     if(utils.check_float(word)):
                         beta = float(word)
             elif(re.findall(txt_plq, line) != []):
-                for word in re.split("\s|:", line):
-                    if(utils.check_float(word)):
-                        plaq.append(float(word))
+                if('Configuration' not in line):
+                    for word in re.split("\s|:", line):
+                        if(utils.check_float(word)):
+                            plaq.append(float(word))
             elif((len(re.findall(txt_py, line)) > 1)): 
                     py_tmp = 0.
                     for word in re.split("\s",re.split("=", line)[1]):

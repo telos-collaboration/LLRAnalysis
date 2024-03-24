@@ -27,14 +27,14 @@ def compare_dE_plot_a(boot_folders, n_repeats, blim,ulim,num_samples=200, error_
         ax1.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$a^4 \Delta_E / 6\\tilde{V}$' + f'= {2*dE / (6*V) :.4f}')
         ax2.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$a^4 \Delta_E / 6\\tilde{V}$' + f'= {2*dE / (6*V) :.4f}')
         j += 1
-    ax1.set_ylabel('$a_n$', fontsize = 30)
-    ax2.set_ylabel('$a_n$', fontsize = 30)
+    ax1.set_ylabel('$a_n$')
+    ax2.set_ylabel('$a_n$')
     ax1.locator_params(axis="x", nbins=7)
     ax2.locator_params(axis="x", nbins=7)
-    ax1.legend(fontsize = 20)
+    ax1.legend()
     ax2.set_xlim(ulim)
     ax2.set_ylim(blim)
-    ax2.set_xlabel('$u_p$', fontsize = 30)
+    ax2.set_xlabel('$u_p$')
     plt.subplots_adjust(hspace=0.05)
     plt.show()
 

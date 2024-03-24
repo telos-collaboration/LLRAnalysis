@@ -32,21 +32,36 @@ def double_Gaussian(x, amp1, mn1, std1,amp2, mn2, std2):
     return G1 + G2
 
 def find_critical_point(betas, dB, tol,N, final_df, full_obs,folder):
-    Bc = full_obs['b'].values[np.argmax(full_obs['Cu'])]
     print('Fitting double gaussian')
-    lnz = llr.calc_lnZ(final_df['Ek'].values, final_df['a'].values, Bc)
     V = 6*final_df['V'].values[0]
-    x, y = llr.calc_prob_distribution(final_df, Bc, lnz)
-    peaks = np.where(y > (0.5 * max(y)))
-    mn1 = x[np.argmax(y)]
-    mn2 = x[y > (0.5 * max(y))].mean() + (x[y > (0.5 * max(y))].mean() - mn1)
-    [mn1,mn2] = [min([mn1,mn2]), max([mn1,mn2])]
-    std = (mn2 - mn1) / 8
+    try:
+        Bc = full_obs['b'].values[np.argmax(full_obs['Cu'])]
+        lnz = llr.calc_lnZ(final_df['Ek'].values, final_df['a'].values, Bc)
+        x, y = llr.calc_prob_distribution(final_df, Bc, lnz)
+        peaks = np.where(y > (0.5 * max(y)))
+        mn1 = x[np.argmax(y)]
+        mn2 = x[y > (0.5 * max(y))].mean() + (x[y > (0.5 * max(y))].mean() - mn1)
+        [mn1,mn2] = [min([mn1,mn2]), max([mn1,mn2])]
+        std = (mn2 - mn1) / 8
+        estimates = (max(y),mn2,std,max(y),mn1,std)
+        xs_tmp = np.linspace(np.min(x[y > ((0.7 * (max(y) / N)))]) , np.max(x[y > ((0.7 * (max(y) / N)))]), 1000)
+        x, y = llr.calc_prob_distribution(final_df, Bc, lnz, xs_tmp)
+        xopt, xcov = curve_fit(double_Gaussian, x, y, p0=estimates)
+    except: 
+        print('Error in fitting using alternate B_c')
+        Bc = full_obs['b'].values[np.argmax(full_obs['Xlp'])]
+        lnz = llr.calc_lnZ(final_df['Ek'].values, final_df['a'].values, Bc)
+        x, y = llr.calc_prob_distribution(final_df, Bc, lnz)
+        peaks = np.where(y > (0.5 * max(y)))
+        mn1 = x[np.argmax(y)]
+        mn2 = x[y > (0.5 * max(y))].mean() + (x[y > (0.5 * max(y))].mean() - mn1)
+        [mn1,mn2] = [min([mn1,mn2]), max([mn1,mn2])]
+        std = (mn2 - mn1) / 8
+        estimates = (max(y),mn2,std,max(y),mn1,std)
+        xs_tmp = np.linspace(np.min(x[y > ((0.7 * (max(y) / N)))]) , np.max(x[y > ((0.7 * (max(y) / N)))]), 1000)
+        x, y = llr.calc_prob_distribution(final_df, Bc, lnz, xs_tmp)
+        xopt, xcov = curve_fit(double_Gaussian, x, y, p0=estimates)
 
-    estimates = (max(y),mn2,std,max(y),mn1,std)
-    xs_tmp = np.linspace(np.min(x[y > ((0.7 * (max(y) / N)))]) , np.max(x[y > ((0.7 * (max(y) / N)))]), 1000)
-    x, y = llr.calc_prob_distribution(final_df, Bc, lnz, xs_tmp)
-    xopt, xcov = curve_fit(double_Gaussian, x, y, p0=estimates)
     j = 0.
     ys_tmp = double_Gaussian(xs_tmp, xopt[0], xopt[1], xopt[2], xopt[3], xopt[4], xopt[5])
     x, y = llr.calc_prob_distribution(final_df, Bc, lnz)

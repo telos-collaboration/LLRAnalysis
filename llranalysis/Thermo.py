@@ -225,24 +225,31 @@ def plot_fxa_polyakovloop_critical(boot_folder,n_repeats,selected_repeat, plt_al
         temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
         plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='k')
 
-        Ek = Ep[tach_inds][0]
-        temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
-        temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
-        plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='r')
-        Ek = Ep[tach_inds][-1]
-        temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
-        temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
-        plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='r')
+        #Ek = Ep[tach_inds][0]
+        #temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
+        #temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
+        #plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='r')
+        #Ek = Ep[tach_inds][-1]
+        #temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
+        #temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
+        #plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='r')
 
-        Ek = Ep[stable_inds][0]
-        temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
-        temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
-        plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='b')
-        Ek = Ep[stable_inds][-1]
-        temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
-        temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
-        plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='b')
-
+        #Ek = Ep[stable_inds][0]
+        #temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
+        #temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
+        #plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='b')
+        #Ek = Ep[stable_inds][-1]
+        #temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
+        #temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
+        #plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='b')
+        for Ek in Ep[tach_inds]:
+            temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
+            temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
+            plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='r')
+        for Ek in Ep[stable_inds]:
+            temp_fxa_df = fxa_df[fxa_df['Ek'].values == Ek]
+            temp_fxa_df = temp_fxa_df[temp_fxa_df['S'].values != 0]
+            plt.hist(temp_fxa_df['Poly'].values, histtype='step', bins = 100, density = True, color='b')
 
 
     plt.xlabel('$|l_p|$', fontsize = 30)

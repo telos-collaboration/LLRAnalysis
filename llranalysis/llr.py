@@ -6,6 +6,11 @@ import os.path
 import llranalysis.utils as utils
 import llranalysis.standard as standard
 import llranalysis.doubleGaussian as dg
+from scipy.interpolate import interp1d
+from scipy.interpolate import InterpolatedUnivariateSpline
+import llranalysis.error as error
+import llranalysis.Thermo as thermo
+
 def ReadRep(file, new_rep, poly):
     txt_dS0 = "LLR Delta S "
     txt_swap = "New Rep Par S0 = "
@@ -459,3 +464,268 @@ def half_intervals(originalfolder, reducedfolder, mode='even'):
         RM_red.to_csv(reducedfolder + str(i) + '/CSV/RM.csv', index = False)
         FA_red.to_csv(reducedfolder+ str(i) + '/CSV/fa.csv', index = False)
         FNL_red.to_csv(reducedfolder + str(i) + '/CSV/final.csv', index = False)
+
+
+def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
+    final_df = pd.read_csv(f'{boot_folder}0/CSV/final.csv')
+    V = final_df['V'][0]; dE = final_df['dE'][0]; 
+    Ep = np.unique(final_df['Ek'])
+    S,T,F,U = thermo.thermodynamics(boot_folder,n_repeats, Ep)
+    Sigma = S.mean()
+    F = (F + Sigma*T) / V
+    mini,meta_mini, midi,meta_maxi, maxi = thermo.find_critical_region(6*V - U.mean(axis=0),T.mean(axis=0)) 
+    ulim_ind = [max([maxi - 2,0]), min([mini + 2,len(Ep)-1])]
+    ulim_int = [1-(U.mean(axis=0)[ulim_ind[0]]/ (6*V)),1-(U.mean(axis=0)[ulim_ind[1]]/ (6*V))]
+    S_int,T_int,F_int,U_int = thermo.thermodynamics(boot_folder,n_repeats, np.linspace( (6*V)*ulim_int[0],  (6*V)*ulim_int[1], 1000))
+    F_int = (F_int + Sigma*T_int) / V
+    
+    mini,meta_mini, midi,meta_maxi, maxi = thermo.find_critical_region(6*V - U_int.mean(axis=0),T_int.mean(axis=0))    
+
+
+    meta_h = range(maxi,meta_mini+1)
+    meta_c = range(meta_maxi,mini+1)
+    unstable = range(meta_mini,meta_maxi+1)
+    
+    Tc = np.array([])
+    P_min_F= np.array([])
+    P_max_F= np.array([])
+    up_min =  np.array([])
+    up_max = np.array([])
+    
+    Tc = np.array([])
+    P_min_F= np.array([])
+    P_max_F= np.array([])
+    up_min =  np.array([])
+    up_max = np.array([])
+    for i in range(n_repeats):
+        f = interp1d(T_int[i,meta_h],F_int[i, meta_h])
+        g = interp1d(T_int[i,meta_c],F_int[i, meta_c])
+        t = np.linspace(max(min(T_int[i,meta_h]),min(T_int[i,meta_c])),min(max(T_int[i,meta_h]),max(T_int[i,meta_c])), 1000)
+        tc_ind = np.where(T_int[i,:] == T_int[i,np.append(meta_h, meta_c)][np.argmin(abs(T_int[i,np.append(meta_h, meta_c)] - t[np.argmin(abs(f(t)-g(t)))]))])[0]
+        tmin = T_int[i,tc_ind]
+        pminf = F_int[i,tc_ind]
+        P_min_F = np.append(P_min_F,F_int[i,unstable][np.argmin(abs(T_int[i,unstable] - tmin))])
+        P_max_F = np.append(P_max_F ,pminf)
+        Tc = np.append(Tc,tmin)
+        
+        up_min = np.append(up_min,1-(U_int[i,meta_h][np.argmin(abs(T_int[i,meta_h] - tmin))]/(6.*V)))
+        up_max = np.append(up_max,1-(U_int[i,meta_c][np.argmin(abs(T_int[i,meta_c] - tmin))]/(6.*V)))
+    F_int -= P_max_F.mean()
+    F -= P_max_F.mean()
+    P_min_F -= P_max_F.mean()
+    P_max_F -= P_max_F.mean()
+    for i in range(n_repeats):
+        pd.DataFrame(data = {'Tc':Tc[i],'Fcmin':P_min_F[i],'Fcmax':P_max_F[i],
+                                    'F':[list(F[i,:])], 'T':[list(T[i,:])], 'S':[list(S[i,:])],'U':[list(U[i,:])],
+                                    'F_int':[list(F_int[i,:])], 'T_int':[list(T_int[i,:])], 'S_int':[list(S_int[i,:])],'U_int':[list(U_int[i,:])],
+                                    'up-':up_min[i] ,'up+':up_max[i],
+                                    'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]]}).to_csv(f'{boot_folder}{i}/CSV/F.csv')
+    
+    F_err = error.calculate_error_set(F,num_samples,error_type);
+    T_err = error.calculate_error_set(T,num_samples,error_type);
+    S_err = error.calculate_error_set(S,num_samples,error_type);
+        
+    F_int = F_int.mean(axis =0); T_int = T_int.mean(axis =0);
+    S_int = S_int.mean(axis =0); U_int = U_int.mean(axis =0);
+    F =F.mean(axis =0); T =T.mean(axis =0);
+    S = S.mean(axis =0); U = U.mean(axis =0);
+    
+    Tc_err = error.calculate_error(Tc,num_samples,error_type); Tc = Tc.mean(axis=0);
+    dF_err = error.calculate_error(P_min_F - P_max_F,num_samples,error_type); dF = (P_min_F - P_max_F).mean(axis=0);
+    
+    du_err = error.calculate_error(up_max -up_min,num_samples,error_type);du = (up_max -up_min).mean(axis=0);
+    up_min_err = error.calculate_error(up_min,num_samples,error_type); up_min = up_min.mean(axis=0);
+    up_max_err = error.calculate_error(up_max,num_samples,error_type); up_max = up_max.mean(axis=0);
+    
+    pd.DataFrame(data = {'Tc':Tc,'Tc_err':Tc_err,
+                         'dF':dF,'dF_err':dF_err,
+                        'F':[list(F)], 'T':[list(T)], 'S':[list(S)],'U':[list(U)],
+                        'F_err':[list(F_err)], 'T_err':[list(T_err)], 'S_err':[list(S_err)],
+                        'F_int':[list(F_int)], 'T_int':[list(T_int)], 'S_int':[list(S_int)],'U_int':[list(U_int)],
+                        'up-':up_min ,'up-_err':up_min_err ,'up+':up_max,'up+_err':up_max_err,
+                         'du':du ,'du_err':du_err ,
+                        'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]]}).to_csv(f'{boot_folder}CSV/F.csv')  
+
+def pre_dat(folder,V,up_min,up_max,N_intervals, betas, location):
+    is_df = pd.read_csv(f'{folder}std.csv')
+    x = np.array(betas)
+    y = np.array([is_df[is_df['Beta']==b]['Plaq'] * 6 * V for b in betas]).flatten()
+    fit = np.poly1d(np.polyfit(y,x,3))
+    Eks = np.linspace(up_min,up_max, N_intervals)* 6 * V
+    aks = fit(Eks)
+    dE = (Eks[1]-Eks[0])*2
+    output = ''
+    for ek,ak in zip(Eks,aks):
+        output+=f'{ek:.5f} {ak:.5f} {dE:.5f}\n'
+    with open(location + 'pre.dat', 'w') as f:f.write(output)
+
+def obs_boot(folder, n_repeat, num_samples, error_type):
+    b = np.array([])
+    u = np.array([]); Cu = np.array([]); Bv = np.array([]);
+    u_err = np.array([]); Cu_err = np.array([]); Bv_err = np.array([]);
+    lp = np.array([]); Xlp = np.array([]); 
+    lp_err = np.array([]); Xlp_err = np.array([]); 
+    for j in range(n_repeat):
+        df = pd.read_csv(f'{folder}{j}/CSV/comparison.csv')
+        u = np.append(u, df['u']);Cu = np.append(Cu, df['Cu']);Bv = np.append(Bv, df['Bv']); 
+        lp = np.append(lp, df['lp']);Xlp = np.append(Xlp, df['Xlp']);
+        b = np.append(b, df['b']) 
+    len_b = len(df['b'])
+    u.shape = [ n_repeat,len_b]; Cu.shape = [ n_repeat,len_b]; Bv.shape = [ n_repeat,len_b];
+    lp.shape = [ n_repeat,len_b]; Xlp.shape = [ n_repeat,len_b]; 
+    b.shape = [ n_repeat,len_b];
+        
+    u_err = error.calculate_error_set(u, num_samples, error_type);
+    Cu_err = error.calculate_error_set(Cu, num_samples, error_type);
+    Bv_err = error.calculate_error_set(Bv, num_samples, error_type);
+    lp_err = error.calculate_error_set(lp, num_samples, error_type);
+    Xlp_err = error.calculate_error_set(Xlp, num_samples, error_type);
+        
+    u = u.mean(axis=0);Cu = Cu.mean(axis=0);Bv = Bv.mean(axis=0);
+    lp = lp.mean(axis=0);Xlp = Xlp.mean(axis=0);
+    b = b.mean(axis=0);
+    pd.DataFrame(data = {'b':b,'u':u,'Cu':Cu, 'Bv':Bv,
+                               'u_err':u_err,'Cu_err':Cu_err, 'Bv_err':Bv_err,
+                               'lp':lp,'Xlp':Xlp,
+                                'lp_err': lp_err,'Xlp_err': Xlp_err}).to_csv(folder + 'CSV/comparison.csv')
+    
+    b = np.array([])
+    bc_Xlp = np.array([]); Xlpc = np.array([]); 
+    u = np.array([]); Cu = np.array([]); Bv = np.array([]);
+    u_err = np.array([]); Cu_err = np.array([]); Bv_err = np.array([]);
+    lp = np.array([]); Xlp = np.array([]); 
+    lp_err = np.array([]); Xlp_err = np.array([]); 
+    for j in range(n_repeat):
+        df = pd.read_csv(f'{folder}{j}/CSV/obs.csv')
+        u = np.append(u, df['u']);Cu = np.append(Cu, df['Cu']);Bv = np.append(Bv, df['Bv']); 
+        lp = np.append(lp, df['lp']);Xlp = np.append(Xlp, df['Xlp']);
+        b = np.append(b, df['b']) 
+        y = [df.iloc[i]['Xlp'] for i in range(len(df)) if not np.isnan(df.iloc[i]['Xlp'])]
+        x = [df.iloc[i]['b'] for i in range(len(df)) if not np.isnan(df.iloc[i]['Xlp'])]
+        bc_Xlp = np.append(bc_Xlp, x[np.argmax(y)])
+        Xlpc = np.append(Xlpc, max(y))
+    len_b = len(df['b'])
+    u.shape = [ n_repeat,len_b]; Cu.shape = [ n_repeat,len_b]; Bv.shape = [ n_repeat,len_b];
+    lp.shape = [ n_repeat,len_b]; Xlp.shape = [ n_repeat,len_b]; 
+    b.shape = [ n_repeat,len_b];
+        
+    u_err = error.calculate_error_set(u, num_samples, error_type);
+    Cu_err = error.calculate_error_set(Cu, num_samples, error_type);
+    Bv_err = error.calculate_error_set(Bv, num_samples, error_type);
+    lp_err = error.calculate_error_set(lp, num_samples, error_type);
+    Xlp_err = error.calculate_error_set(Xlp, num_samples, error_type);
+        
+    u = u.mean(axis=0);Cu = Cu.mean(axis=0);Bv = Bv.mean(axis=0);
+    lp = lp.mean(axis=0);Xlp = Xlp.mean(axis=0);
+    b = b.mean(axis=0);
+    pd.DataFrame(data = {'b':b,'u':u,'Cu':Cu, 'Bv':Bv,
+                               'u_err':u_err,'Cu_err':Cu_err, 'Bv_err':Bv_err,
+                               'lp':lp,'Xlp':Xlp,
+                                'lp_err': lp_err,'Xlp_err': Xlp_err}).to_csv(folder + 'CSV/obs.csv')
+    
+    b = np.array([])
+    bc_Cu = np.array([]); Cuc = np.array([]); 
+    bc_Bv = np.array([]); Bvc = np.array([]); 
+    u = np.array([]); Cu = np.array([]); Bv = np.array([]);
+    u_err = np.array([]); Cu_err = np.array([]); Bv_err = np.array([]);
+    for j in range(n_repeat):
+        df = pd.read_csv(f'{folder}{j}/CSV/obs_critical.csv')
+        u = np.append(u, df['u']);Cu = np.append(Cu, df['Cu']);Bv = np.append(Bv, df['Bv']); 
+        b = np.append(b, df['b']) 
+        y = [df.iloc[i]['Cu'] for i in range(len(df)) if not np.isnan(df.iloc[i]['Cu'])]
+        x = [df.iloc[i]['b'] for i in range(len(df)) if not np.isnan(df.iloc[i]['Cu'])]
+        bc_Cu = np.append(bc_Cu,  x[np.argmax(y)])
+        Cuc = np.append(Cuc, max(y))
+        y = [df.iloc[i]['Bv'] for i in range(len(df)) if not np.isnan(df.iloc[i]['Bv'])]
+        x = [df.iloc[i]['b'] for i in range(len(df)) if not np.isnan(df.iloc[i]['Bv'])]
+        bc_Bv = np.append(bc_Bv, x[np.argmin(y)])
+        Bvc = np.append(Bvc, min(y))
+
+    len_b = len(df['b'])
+    u.shape = [ n_repeat,len_b]; Cu.shape = [ n_repeat,len_b]; Bv.shape = [ n_repeat,len_b];
+    b.shape = [ n_repeat,len_b];
+        
+    u_err = error.calculate_error_set(u, num_samples, error_type);
+    Cu_err = error.calculate_error_set(Cu, num_samples, error_type);
+    Bv_err = error.calculate_error_set(Bv, num_samples, error_type);
+        
+    u = u.mean(axis=0);Cu = Cu.mean(axis=0);Bv = Bv.mean(axis=0);
+    lp = lp.mean(axis=0);Xlp = Xlp.mean(axis=0);
+    b = b.mean(axis=0);
+    pd.DataFrame(data = {'b':b,'u':u,'Cu':Cu, 'Bv':Bv,
+                               'u_err':u_err,'Cu_err':Cu_err, 'Bv_err':Bv_err,}).to_csv(folder + 'CSV/obs_critical.csv')
+    
+    bc_Xlp_err = error.calculate_error(bc_Xlp, num_samples, error_type);
+    bc_Cu_err = error.calculate_error(bc_Cu, num_samples, error_type);
+    bc_Bv_err = error.calculate_error(bc_Bv, num_samples, error_type);
+    Cuc_err = error.calculate_error(Cuc, num_samples, error_type);
+    Bvc_err = error.calculate_error(Bvc, num_samples, error_type);
+    Xlpc_err = error.calculate_error(Xlpc, num_samples, error_type);
+    
+    bc_Xlp = bc_Xlp.mean();
+    bc_Cu = bc_Cu.mean();
+    bc_Bv = bc_Bv.mean();
+    Cuc = Cuc.mean();
+    Bvc = Bvc.mean();
+    Xlpc = Xlpc.mean();
+    pd.DataFrame(data = {'b_Xlp':bc_Xlp,'b_Xlp_err':bc_Xlp_err,'Xlp':Xlpc, 'Xlp_err':Xlpc_err,
+                         'b_Cu':bc_Cu,'b_Cu_err':bc_Cu_err,'Cu':Cuc, 'Cu_err':Cuc_err,
+                         'b_Bv':bc_Bv,'b_Bv_err':bc_Bv_err,'Bv':Bvc, 'Bv_err':Bvc_err}, index=[0]).to_csv(folder + 'CSV/critical.csv')
+    
+def final_boot(folder, n_repeat, num_samples, error_type):
+    ak = np.array([]);Ek = np.array([]); 
+    for j in range(n_repeat):
+        df = pd.read_csv(f'{folder}{j}/CSV/final.csv')
+        ak = np.append(ak, df['a']);
+    ak.shape = [n_repeat,len(df['a'])];
+    Ek = df['Ek']
+    dE = df['dE']
+    ak_err = error.calculate_error_set(ak, num_samples, error_type);    
+    ak = ak.mean(axis=0);
+    pd.DataFrame(data = {'Ek':Ek,'a':ak,'a_err':ak_err, 'dE':dE,'V':df['V'],'Lt':df['Lt']}).to_csv(folder + 'CSV/final.csv', index = False)
+    info_df = pd.read_csv(f'{folder}CSV/info.csv')
+    info_df['dE'] = dE[0]
+    info_df.to_csv(f'{folder}CSV/info.csv', index = False)
+    
+def DG_boot(folder, n_repeat, num_samples, error_type):
+    bc = np.array([]);dup = np.array([]); dP= np.array([]);
+    for j in range(n_repeat):
+        df = pd.read_csv(f'{folder}{j}/CSV/DG.csv')
+        bc = np.append(bc, df['Bc']);
+        dup = np.append(dup, df['Bc'] / (6*df['V']));
+        dP =  np.append(dP, df['dP']);
+    bc_err = error.calculate_error(bc, num_samples, error_type); 
+    dup_err = error.calculate_error(dup, num_samples, error_type); 
+    dP_err = error.calculate_error(dP, num_samples, error_type); 
+    bc = bc.mean(axis=0);dup = dup.mean(axis=0);dP = dP.mean(axis=0);
+    pd.DataFrame(data = {'bc':bc,'bc_err':bc_err,'dup':dup, 'dup_err':dup_err,'dP':dP, 'dP_err':dP_err}, index=[0]).to_csv(folder + 'CSV/DG.csv', index = False)
+
+def prepare_all(folder):
+    info_df = pd.read_csv(folder + 'CSV/info.csv')
+    np.random.seed(info_df['seed'][0])
+    seeds = np.random.randint(1000, size=3)
+    if not os.path.isfile(folder + 'pre.dat'):
+        print('Creating inital a and E')
+        pre_dat(info_df['std_folder'][0],info_df['V'][0],info_df['umin'][0],info_df['umax'][0], info_df['n_replicas'][0], eval(info_df['IS_b'][0]), folder)
+        return
+    betas = np.linspace(eval(info_df['betas'][0])[0],eval(info_df['betas'][0])[1], eval(info_df['betas'][0])[2])
+    betas_critical = np.linspace(eval(info_df['betas_critical'][0])[0],eval(info_df['betas_critical'][0])[1], eval(info_df['betas_critical'][0])[2])
+    check_obs = os.path.isfile(folder + 'CSV/comparison.csv') * os.path.isfile(folder + 'CSV/obs.csv') * os.path.isfile(folder + 'CSV/obs_critical.csv')* os.path.isfile(folder + 'CSV/final.csv')* os.path.isfile(folder + 'CSV/critical.csv');
+    check_dg = os.path.isfile(folder + 'CSV/DG.csv');
+    check_free_energy = os.path.isfile(folder + 'CSV/F.csv'); 
+    for i in range(info_df['n_repeats'][0]):
+        check_obs *= os.path.isfile(folder + f'{i}/CSV/comparison.csv') * os.path.isfile(folder + f'{i}/CSV/obs.csv') * os.path.isfile(folder + f'{i}/CSV/obs_critical.csv')* os.path.isfile(folder + f'{i}/CSV/final.csv')
+        check_dg *= os.path.isfile(folder + f'{i}/CSV/DG.csv')
+        check_free_energy *= os.path.isfile(folder + f'{i}/CSV/F.csv')
+    if not check_obs:
+        np.random.seed(seeds[0])
+        prepare_data(folder, info_df['n_repeats'][0],  info_df['n_replicas'][0], eval(info_df['std_files'][0]),  info_df['std_folder'][0], betas, betas_critical)
+        final_boot(folder,info_df['n_repeats'][0] ,info_df['num_samples'][0],info_df['error_type'][0])
+        obs_boot(folder,info_df['n_repeats'][0] ,info_df['num_samples'][0],info_df['error_type'][0])
+    if not check_dg:
+        np.random.seed(seeds[1])
+        dg.prepare_DG(folder, info_df['n_repeats'][0], betas, info_df['dg_tol'][0], info_df['dg_db'][0]) 
+        DG_boot(folder,info_df['n_repeats'][0] ,info_df['num_samples'][0],info_df['error_type'][0])
+    if not check_free_energy:
+        np.random.seed(seeds[2])
+        free_energy_df(folder,info_df['n_repeats'][0],info_df['num_samples'][0],info_df['error_type'][0])

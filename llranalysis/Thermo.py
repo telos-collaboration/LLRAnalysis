@@ -11,25 +11,17 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 import matplotlib as mpl
 
 def find_critical_region(E,b):
-    cr = [len(InterpolatedUnivariateSpline(E,b - b[i]).roots())>2 for i in range(len(b))]
+    cr = [len(InterpolatedUnivariateSpline(E,b - b[i]).roots())>=2 for i in range(len(b))]
     mini = min(np.nonzero(cr)[0]); maxi= max(np.nonzero(cr)[0])
-    print(InterpolatedUnivariateSpline(E,b - b[mini]).roots())
-    print(InterpolatedUnivariateSpline(E,b - b[maxi]).roots())
-    print(b[maxi], b[mini])
-    difference = E.max()
-    midi = 0
-    for ind in np.nonzero(cr)[0]:
-        spl = InterpolatedUnivariateSpline(E,b - b[ind]).roots()
-        if len(spl) >=3:
-            if (difference > abs(spl[0] + spl[2] - 2*spl[1])):
-                midi = ind    
-                difference = abs(spl[0] + spl[2] - 2*spl[1])
-    
+    midb = (b[mini] + b[maxi]) / 2. 
+    spl = InterpolatedUnivariateSpline(E,b - midb).roots()
+    midi  = np.argmin(abs(E - np.median(spl)))
     meta_mini = np.argmax(b*(E > E[midi]))
     meta_maxi = np.argmin(b + b.max()*(E > E[midi]))
-    [mini,midi,maxi] = np.sort(np.array([(mini,b[mini]), (midi,b[midi]),(maxi,b[maxi])],dtype=[('ind',int),('temp',float)]), order='temp')['ind']
-    [meta_mini,meta_maxi] = np.sort(np.array([(meta_mini,b[meta_mini]), (meta_maxi,b[meta_maxi])],dtype=[('ind',int),('temp',float)]), order='temp')['ind']   
+    [maxi,midi,mini] = np.sort(np.array([(mini,E[mini]), (midi,E[midi]),(maxi,E[maxi])],dtype=[('ind',int),('temp',float)]), order='temp')['ind']
+    [meta_mini,meta_maxi] = np.sort(np.array([(meta_mini,E[meta_mini]), (meta_maxi,E[meta_maxi])],dtype=[('ind',int),('temp',float)]), order='temp')['ind']   
     return mini,meta_mini, midi,meta_maxi, maxi
+
 
 def thermodynamics(boot_folder,n_repeats, Es):
     logrho0 = 0

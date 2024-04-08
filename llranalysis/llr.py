@@ -467,8 +467,8 @@ def half_intervals(originalfolder, reducedfolder, mode='even'):
 
 
 def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
-    final_df = pd.read_csv(f'{boot_folder}0/CSV/final.csv')
-    V = final_df['V'][0]; dE = final_df['dE'][0]; 
+    final_df = pd.read_csv(f'{boot_folder}/CSV/final.csv')
+    V = final_df['V'][0]
     Ep = np.unique(final_df['Ek'])
     S,T,F,U = thermo.thermodynamics(boot_folder,n_repeats, Ep)
     Sigma = S.mean()
@@ -497,6 +497,8 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
     P_max_F= np.array([])
     up_min =  np.array([])
     up_max = np.array([])
+
+    xs = np.array([]);ys = np.array([])
     for i in range(n_repeats):
         f = interp1d(T_int[i,meta_h],F_int[i, meta_h])
         g = interp1d(T_int[i,meta_c],F_int[i, meta_c])
@@ -510,16 +512,28 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
         
         up_min = np.append(up_min,1-(U_int[i,meta_h][np.argmin(abs(T_int[i,meta_h] - tmin))]/(6.*V)))
         up_max = np.append(up_max,1-(U_int[i,meta_c][np.argmin(abs(T_int[i,meta_c] - tmin))]/(6.*V)))
+        
+        beta = 1/tmin[0]
+        final_df = pd.read_csv(f'{boot_folder}{i}/CSV/final.csv')
+        lnz = float(calc_lnZ(final_df['Ek'].values, final_df['a'].values, beta))
+        x, y = calc_prob_distribution(final_df, beta, lnz)
+        xs = np.append(xs, x); ys = np.append(ys, y * (6*V))
+    xs.shape = [n_repeats, len(x)]; ys.shape = [n_repeats, len(y)]
+
+
     F_int -= P_max_F.mean()
     F -= P_max_F.mean()
     P_min_F -= P_max_F.mean()
     P_max_F -= P_max_F.mean()
+    
+    
     for i in range(n_repeats):
         pd.DataFrame(data = {'Tc':Tc[i],'Fcmin':P_min_F[i],'Fcmax':P_max_F[i],
                                     'F':[list(F[i,:])], 'T':[list(T[i,:])], 'S':[list(S[i,:])],'U':[list(U[i,:])],
                                     'F_int':[list(F_int[i,:])], 'T_int':[list(T_int[i,:])], 'S_int':[list(S_int[i,:])],'U_int':[list(U_int[i,:])],
                                     'up-':up_min[i] ,'up+':up_max[i],
-                                    'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]]}).to_csv(f'{boot_folder}{i}/CSV/F.csv')
+                                    'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]], 
+                                    'E_Pb':[list(xs[i,:])], 'Pb':[list(ys[i,:])] }).to_csv(f'{boot_folder}{i}/CSV/F.csv')
     
     F_err = error.calculate_error_set(F,num_samples,error_type);
     T_err = error.calculate_error_set(T,num_samples,error_type);
@@ -537,6 +551,10 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
     up_min_err = error.calculate_error(up_min,num_samples,error_type); up_min = up_min.mean(axis=0);
     up_max_err = error.calculate_error(up_max,num_samples,error_type); up_max = up_max.mean(axis=0);
     
+    xs = xs.mean(axis = 0)
+    ys_err = error.calculate_error_set(ys, num_samples, error_type)
+    ys = ys.mean(axis = 0)
+
     pd.DataFrame(data = {'Tc':Tc,'Tc_err':Tc_err,
                          'dF':dF,'dF_err':dF_err,
                         'F':[list(F)], 'T':[list(T)], 'S':[list(S)],'U':[list(U)],
@@ -544,7 +562,8 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
                         'F_int':[list(F_int)], 'T_int':[list(T_int)], 'S_int':[list(S_int)],'U_int':[list(U_int)],
                         'up-':up_min ,'up-_err':up_min_err ,'up+':up_max,'up+_err':up_max_err,
                          'du':du ,'du_err':du_err ,
-                        'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]]}).to_csv(f'{boot_folder}CSV/F.csv')  
+                        'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]],
+                        'E_Pb':[list(xs)], 'Pb':[list(ys)], 'Pb_err':[list(ys_err)]}).to_csv(f'{boot_folder}CSV/F.csv')  
 
 def pre_dat(folder,V,up_min,up_max,N_intervals, betas, location):
     is_df = pd.read_csv(f'{folder}std.csv')

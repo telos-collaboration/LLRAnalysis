@@ -24,8 +24,10 @@ def compare_dE_plot_a(boot_folders, n_repeats, blim,ulim,num_samples=200, error_
             aks[i,:] = -final_df['a'].values
         aks_mean = aks.mean(axis = 0)
         aks_error = error.calculate_error_set(aks,num_samples,error_type)
-        ax1.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$a^4 \Delta_E / 6\\tilde{V}$' + f'= {2*dE / (6*V) :.4f}')
-        ax2.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$a^4 \Delta_E / 6\\tilde{V}$' + f'= {2*dE / (6*V) :.4f}')
+        #ax1.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$a^4 \Delta_E / 6\\tilde{V}$' + f'= {2*dE / (6*V) :.4f}')
+        #ax2.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$a^4 \Delta_E / 6\\tilde{V}$' + f'= {2*dE / (6*V) :.4f}')
+        ax1.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$\Delta_{u_p}$' + f'= {2*dE / (6*V) :.4f}')
+        ax2.errorbar(Eks/(6*V),aks_mean,aks_error, fmt = colours[j] + '-', label = '$\Delta_{u_p}$' + f'= {2*dE / (6*V) :.4f}')
         j += 1
     ax1.set_ylabel('$a_n$')
     ax2.set_ylabel('$a_n$')
@@ -93,7 +95,8 @@ def dE_DG_critical_beta(full_folders, reduced_folders, additional_folders, num_r
     print(f'All intervals all points & 0 & {DG_bc_0} ({DG_bc_0_err})')
     plt.errorbar(0,DG_bc_0,DG_bc_0_err, color=c, marker= '^', capsize=8, capthick=5, ms = markersize) 
     plt.ylabel('$\\beta_c$')
-    plt.xlabel('$(a^4 \\Delta_E / (6\\tilde{V}))^2$')
+    #plt.xlabel('$(a^4 \\Delta_E / (6\\tilde{V}))^2$')
+    plt.xlabel('$(\\Delta_{u_p})^2$')
     plt.ylim([miny,maxy])
     #plt.errorbar(np.NaN, np.NaN,np.NaN,marker = 'o', color = 'g',label = 'All intervals, all points')
     plt.errorbar(np.NaN, np.NaN,np.NaN,marker = 'o', color = 'darkorange',label = 'All intervals')
@@ -151,7 +154,8 @@ def dE_DG_critical_plaq(full_folders, reduced_folders, additional_folders, num_r
     print(f'All intervals all points & 0 & {up_bc_0} ({up_bc_0_err})')
     plt.errorbar(0,up_bc_0,up_bc_0_err, color=c, marker= '^', capsize=8, capthick=5, ms = markersize)  
     plt.ylabel('$\Delta \\langle u_p \\rangle_{\\beta_c}$')
-    plt.xlabel('$(a^4 \\Delta_E / (6\\tilde{V}))^2$')
+    #plt.xlabel('$(a^4 \\Delta_E / (6\\tilde{V}))^2$')
+    plt.xlabel('$(\\Delta_{u_p})^2$')
     #plt.errorbar(np.NaN, np.NaN,np.NaN,marker = 'o', color = 'g',label = 'All intervals, all points')
     plt.errorbar(np.NaN, np.NaN,np.NaN,marker = 'o', color = 'darkorange',label = 'All intervals')
     plt.errorbar(np.NaN, np.NaN,np.NaN,marker= 'o',color= 'b', label = 'Odd intervals')
@@ -200,7 +204,8 @@ def compare_dE_plot_y(boot_folders, n_repeats, std_files, std_folder, std_key, l
             plt.axvspan(bmax_avr - bmax_err,bmax_avr + bmax_err, alpha=0.2, color=colours[i])
             plt.axvline(bmax_avr, color=colours[i],linestyle='dashed')
         llr_full_y = llr_full_y.mean(axis=0)
-        plt.plot(llr_full_b, llr_full_y, colours[i] + '-', label = 'LLR  $a^4 \Delta_E/ 6\\tilde{V}$' + f'= {2*dE / (6*V):.4f}' ,zorder=i) #
+        #plt.plot(llr_full_b, llr_full_y, colours[i] + '-', label = 'LLR  $a^4 \Delta_E/ 6\\tilde{V}$' + f'= {2*dE / (6*V):.4f}' ,zorder=i) #
+        plt.plot(llr_full_b, llr_full_y, colours[i] + '-', label = 'LLR  $\Delta_{u_p}$' + f'= {2*dE / (6*V):.4f}' ,zorder=i) #
         plt.plot(llr_full_b, llr_full_y +llr_full_y_err, colours[i] + '--')
         plt.plot(llr_full_b,llr_full_y - llr_full_y_err, colours[i] + '--')
         plt.errorbar(llr_comp_b, llr_comp_y,llr_comp_y_err, fmt = colours[i] + 'o', capsize=10)
@@ -238,7 +243,8 @@ def compare_dE_plot_y_difference(boot_folders, n_repeats, std_files, std_folder,
         b = std_ys; db = std_ys_err;
         c = (a - b)/ b;
         dc = (a/b) * ((((da/a)**2) + ((db/b)**2))**0.5)
-        plt.errorbar(llr_comp_b, c,dc, fmt = colours[i] + 'o', capsize=10, label = 'LLR  $a^4 \Delta_E/ 6\\tilde{V}$' + f'= {2*dE / (6*V):.4f}',zorder=i)
+        #plt.errorbar(llr_comp_b, c,dc, fmt = colours[i] + 'o', capsize=10, label = 'LLR  $a^4 \Delta_E/ 6\\tilde{V}$' + f'= {2*dE / (6*V):.4f}',zorder=i)
+        plt.errorbar(llr_comp_b, c,dc, fmt = colours[i] + 'o', capsize=10, label = 'LLR  $\Delta_{u_p}$' + f'= {2*dE / (6*V):.4f}',zorder=i)
         print(llr_comp_b, dE/(3*V))
         print(c,dc)
     #plt.errorbar(std_bs, 0.*std_ys, std_ys_err, fmt ='k^', label='Importance sampling', capsize=10)
@@ -261,6 +267,8 @@ def compare_dE_plot_ymax(boot_folders, n_repeats, llr_key, label,minimum=False,n
         full_b = np.array([])
         for j in range(nr):
             full_df = pd.read_csv(f'{bf}{j}/CSV/obs_critical.csv')
+            if(full_df[llr_key].values.sum() == 0):
+                full_df = pd.read_csv(f'{bf}{j}/CSV/obs.csv')
             y = [full_df.iloc[i][llr_key] for i in range(len(full_df)) if not np.isnan(full_df.iloc[i][llr_key])]
             b = [full_df.iloc[i]['b'] for i in range(len(full_df)) if not np.isnan(full_df.iloc[i][llr_key])]
             if minimum: arg = np.argmin(y)
@@ -279,7 +287,9 @@ def compare_dE_plot_ymax(boot_folders, n_repeats, llr_key, label,minimum=False,n
     print(ymax)
     print(ymax_err)
     ylim, ylim_err = utils.plot_extrap(dEsq,ymax,ymax_err, np.arange(len(dEsq)), 'k')
-    plt.xlabel('$(a^4 \Delta_E/ 6\\tilde{V})^2$', fontsize = 30)
+    print(ylim, ylim_err)
+    #plt.xlabel('$(a^4 \Delta_E/ 6\\tilde{V})^2$', fontsize = 30)
+    plt.xlabel('$(\Delta_{u_p})^2$', fontsize = 30)
     plt.locator_params(axis="x", nbins=7)
     plt.show()    
 

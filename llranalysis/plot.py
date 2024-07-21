@@ -116,7 +116,7 @@ def plot_comparison_histograms(boot_folder, n_repeats, std_files, std_folder,num
     print('DE/6V:', 2* final_df['dE'].values[0] / (6*final_df['V'].values[0]))
     plt.yticks([])
     plt.plot(np.NaN, np.NaN, 'b-', label='LLR')
-    plt.plot(np.NaN, np.NaN, c='darkorange', ls='-', label='Importance sampling')
+    plt.plot(np.NaN, np.NaN, c='darkorange', ls='--', label='Importance sampling')
     plt.legend() 
     plt.ylabel('$P_{\\beta}(u_p)$' )
     plt.xlabel('$u_p$')

@@ -10,8 +10,17 @@ from scipy.interpolate import interp1d
 from scipy.interpolate import InterpolatedUnivariateSpline
 import matplotlib as mpl
 
+
 def find_critical_region(E,b):
-    cr = [len(InterpolatedUnivariateSpline(E,b - b[i]).roots())>=2 for i in range(len(b))]
+    dE = abs(E[1] - E[0])
+    #cr = [len(InterpolatedUnivariateSpline(E,b - b[i]).roots())>=2 for i in range(len(b))]
+    cr = []
+    #Changed to deal with a problem in a single ensemble :(
+    for i in range(len(b)):
+        roots = InterpolatedUnivariateSpline(E,b - b[i]).roots()
+        if (len(roots>=2)): 
+            cr.append((max(roots) - min(roots) > dE/10)) 
+        else: cr.append(False)
     mini = min(np.nonzero(cr)[0]); maxi= max(np.nonzero(cr)[0])
     midb = (b[mini] + b[maxi]) / 2. 
     spl = InterpolatedUnivariateSpline(E,b - midb).roots()

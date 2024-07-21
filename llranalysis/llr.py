@@ -469,6 +469,8 @@ def half_intervals(originalfolder, reducedfolder, mode='even'):
 def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
     final_df = pd.read_csv(f'{boot_folder}/CSV/final.csv')
     V = final_df['V'][0]
+    info_df = pd.read_csv(f'{boot_folder}/CSV/info.csv')
+    Lt = info_df['Lt'][0]; Ls = info_df['Ls'][0];
     Ep = np.unique(final_df['Ek'])
     S,T,F,U = thermo.thermodynamics(boot_folder,n_repeats, Ep)
     Sigma = S.mean()
@@ -497,16 +499,26 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
     P_max_F= np.array([])
     up_min =  np.array([])
     up_max = np.array([])
+    sigma = np.array([])
 
     xs = np.array([]);ys = np.array([])
     for i in range(n_repeats):
-        f = interp1d(T_int[i,meta_h],F_int[i, meta_h])
-        g = interp1d(T_int[i,meta_c],F_int[i, meta_c])
-        t = np.linspace(max(min(T_int[i,meta_h]),min(T_int[i,meta_c])),min(max(T_int[i,meta_h]),max(T_int[i,meta_c])), 1000)
-        tc_ind = np.where(T_int[i,:] == T_int[i,np.append(meta_h, meta_c)][np.argmin(abs(T_int[i,np.append(meta_h, meta_c)] - t[np.argmin(abs(f(t)-g(t)))]))])[0]
+        try:
+            f = interp1d(T_int[i,meta_h],F_int[i, meta_h])
+            g = interp1d(T_int[i,meta_c],F_int[i, meta_c])
+            t = np.linspace(max(min(T_int[i,meta_h]),min(T_int[i,meta_c])),min(max(T_int[i,meta_h]),max(T_int[i,meta_c])), 10000)
+            tc_ind = np.where(T_int[i,:] == T_int[i,np.append(meta_h, meta_c)][np.argmin(abs(T_int[i,np.append(meta_h, meta_c)] - t[np.argmin(abs(f(t)-g(t)))]))])[0]
+        except:
+            print('Error no overlap in two meta-stable branches, likely misclassified : including unstable branch')
+            mc = meta_c; mh = np.append(meta_h,unstable).flatten()
+            f = interp1d(T_int[i,mh],F_int[i,mh])
+            g = interp1d(T_int[i,mc],F_int[i, mc])
+            t = np.linspace(max(min(T_int[i,mh]),min(T_int[i,mc])),min(max(T_int[i, mh]),max(T_int[i,mc])),  10000)
+            tc_ind = np.where(T_int[i,:] == T_int[i,np.append(mh, mc)][np.argmin(abs(T_int[i,np.append(mh,mc)] - t[np.argmin(abs(f(t)-g(t)))]))])[0]
         tmin = T_int[i,tc_ind]
         pminf = F_int[i,tc_ind]
-        P_min_F = np.append(P_min_F,F_int[i,unstable][np.argmin(abs(T_int[i,unstable] - tmin))])
+        pmaxf = F_int[i,unstable][np.argmin(abs(T_int[i,unstable] - tmin))]
+        P_min_F = np.append(P_min_F,pmaxf)
         P_max_F = np.append(P_max_F ,pminf)
         Tc = np.append(Tc,tmin)
         
@@ -518,14 +530,15 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
         lnz = float(calc_lnZ(final_df['Ek'].values, final_df['a'].values, beta))
         x, y = calc_prob_distribution(final_df, beta, lnz)
         xs = np.append(xs, x); ys = np.append(ys, y * (6*V))
-    xs.shape = [n_repeats, len(x)]; ys.shape = [n_repeats, len(y)]
 
+    xs.shape = [n_repeats, len(x)]; ys.shape = [n_repeats, len(y)]
 
     F_int -= P_max_F.mean()
     F -= P_max_F.mean()
     P_min_F -= P_max_F.mean()
     P_max_F -= P_max_F.mean()
     
+    sigma =  ( ( (Lt**3) * Ls * (P_min_F - P_max_F) ) / (2*Tc)) + (((Lt**2)*np.log(Ls) ) / (4*(Ls**2)) )
     
     for i in range(n_repeats):
         pd.DataFrame(data = {'Tc':Tc[i],'Fcmin':P_min_F[i],'Fcmax':P_max_F[i],
@@ -533,7 +546,7 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
                                     'F_int':[list(F_int[i,:])], 'T_int':[list(T_int[i,:])], 'S_int':[list(S_int[i,:])],'U_int':[list(U_int[i,:])],
                                     'up-':up_min[i] ,'up+':up_max[i],
                                     'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]], 
-                                    'E_Pb':[list(xs[i,:])], 'Pb':[list(ys[i,:])] }).to_csv(f'{boot_folder}{i}/CSV/F.csv')
+                                    'E_Pb':[list(xs[i,:])], 'Pb':[list(ys[i,:])]}).to_csv(f'{boot_folder}{i}/CSV/F.csv')
     
     F_err = error.calculate_error_set(F,num_samples,error_type);
     T_err = error.calculate_error_set(T,num_samples,error_type);
@@ -546,11 +559,10 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
     
     Tc_err = error.calculate_error(Tc,num_samples,error_type); Tc = Tc.mean(axis=0);
     dF_err = error.calculate_error(P_min_F - P_max_F,num_samples,error_type); dF = (P_min_F - P_max_F).mean(axis=0);
-    
     du_err = error.calculate_error(up_max -up_min,num_samples,error_type);du = (up_max -up_min).mean(axis=0);
     up_min_err = error.calculate_error(up_min,num_samples,error_type); up_min = up_min.mean(axis=0);
     up_max_err = error.calculate_error(up_max,num_samples,error_type); up_max = up_max.mean(axis=0);
-    
+    sigma_err = error.calculate_error(sigma,num_samples,error_type);sigma = sigma.mean();
     xs = xs.mean(axis = 0)
     ys_err = error.calculate_error_set(ys, num_samples, error_type)
     ys = ys.mean(axis = 0)
@@ -563,7 +575,8 @@ def free_energy_df(boot_folder,n_repeats,num_samples,error_type):
                         'up-':up_min ,'up-_err':up_min_err ,'up+':up_max,'up+_err':up_max_err,
                          'du':du ,'du_err':du_err ,
                         'ind_c': [[mini,meta_mini, midi,meta_maxi, maxi]],
-                        'E_Pb':[list(xs)], 'Pb':[list(ys)], 'Pb_err':[list(ys_err)]}).to_csv(f'{boot_folder}CSV/F.csv')  
+                        'E_Pb':[list(xs)], 'Pb':[list(ys)], 'Pb_err':[list(ys_err)],
+                        'Sigma':sigma,'Sigma_err':sigma_err}).to_csv(f'{boot_folder}CSV/F.csv')  
 
 def pre_dat(folder,V,up_min,up_max,N_intervals, betas, location):
     is_df = pd.read_csv(f'{folder}std.csv')
@@ -680,16 +693,16 @@ def obs_boot(folder, n_repeat, num_samples, error_type):
     Cuc_err = error.calculate_error(Cuc, num_samples, error_type);
     Bvc_err = error.calculate_error(Bvc, num_samples, error_type);
     Xlpc_err = error.calculate_error(Xlpc, num_samples, error_type);
-    
+    pd.DataFrame(data = {'b_Xlp':bc_Xlp,'b_Xlp_err':bc_Xlp_err,'Xlp':Xlpc, 'Xlp_err':Xlpc_err,
+                         'b_Cu':bc_Cu,'b_Cu_err':bc_Cu_err,'Cu':Cuc, 'Cu_err':Cuc_err,
+                         'b_Bv':bc_Bv,'b_Bv_err':bc_Bv_err,'Bv':Bvc, 'Bv_err':Bvc_err}, index=[0]).to_csv(folder + 'CSV/critical.csv')
     bc_Xlp = bc_Xlp.mean();
     bc_Cu = bc_Cu.mean();
     bc_Bv = bc_Bv.mean();
     Cuc = Cuc.mean();
     Bvc = Bvc.mean();
     Xlpc = Xlpc.mean();
-    pd.DataFrame(data = {'b_Xlp':bc_Xlp,'b_Xlp_err':bc_Xlp_err,'Xlp':Xlpc, 'Xlp_err':Xlpc_err,
-                         'b_Cu':bc_Cu,'b_Cu_err':bc_Cu_err,'Cu':Cuc, 'Cu_err':Cuc_err,
-                         'b_Bv':bc_Bv,'b_Bv_err':bc_Bv_err,'Bv':Bvc, 'Bv_err':Bvc_err}, index=[0]).to_csv(folder + 'CSV/critical.csv')
+
     
 def final_boot(folder, n_repeat, num_samples, error_type):
     ak = np.array([]);Ek = np.array([]); 
@@ -711,7 +724,7 @@ def DG_boot(folder, n_repeat, num_samples, error_type):
     for j in range(n_repeat):
         df = pd.read_csv(f'{folder}{j}/CSV/DG.csv')
         bc = np.append(bc, df['Bc']);
-        dup = np.append(dup, df['Bc'] / (6*df['V']));
+        dup = np.append(dup, df['lh'] / (6*df['V']));
         dP =  np.append(dP, df['dP']);
     bc_err = error.calculate_error(bc, num_samples, error_type); 
     dup_err = error.calculate_error(dup, num_samples, error_type); 

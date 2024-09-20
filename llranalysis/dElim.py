@@ -94,7 +94,7 @@ def dE_DG_critical_beta(full_folders, reduced_folders, additional_folders, num_r
     DG_bc_0, DG_bc_0_err = utils.plot_extrap(dEsq,DG_bc_dE,DG_bc_dE_err, np.arange(len(dEsq)), c, mindEsq)
     print(f'All intervals all points & 0 & {DG_bc_0} ({DG_bc_0_err})')
     plt.errorbar(0,DG_bc_0,DG_bc_0_err, color=c, marker= '^', capsize=8, capthick=5, ms = markersize) 
-    plt.ylabel('$\\beta_c$')
+    plt.ylabel('$\\beta_{CV}$')
     #plt.xlabel('$(a^4 \\Delta_E / (6\\tilde{V}))^2$')
     plt.xlabel('$(\\Delta_{u_p})^2$')
     plt.ylim([miny,maxy])
@@ -153,7 +153,7 @@ def dE_DG_critical_plaq(full_folders, reduced_folders, additional_folders, num_r
     up_bc_0, up_bc_0_err = utils.plot_extrap(dEsq,up_bc_dE,up_bc_dE_err, np.arange(len(dEsq)), c, mindEsq)
     print(f'All intervals all points & 0 & {up_bc_0} ({up_bc_0_err})')
     plt.errorbar(0,up_bc_0,up_bc_0_err, color=c, marker= '^', capsize=8, capthick=5, ms = markersize)  
-    plt.ylabel('$\Delta \\langle u_p \\rangle_{\\beta_c}$')
+    plt.ylabel('$\Delta \\langle u_p \\rangle_{\\beta_{CV}}$')
     #plt.xlabel('$(a^4 \\Delta_E / (6\\tilde{V}))^2$')
     plt.xlabel('$(\\Delta_{u_p})^2$')
     #plt.errorbar(np.NaN, np.NaN,np.NaN,marker = 'o', color = 'g',label = 'All intervals, all points')
@@ -323,3 +323,5 @@ def histogram_ymax(boot_folders, n_repeats, llr_key, label,minimum=False):
         axs[0,i].set_xlabel(label)
         axs[1,i].set_xlabel('$\\beta$')
     plt.show()    
+
+

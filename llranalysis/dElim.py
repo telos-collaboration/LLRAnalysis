@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-import os.path
 import numpy as np
-import llranalysis.llr as llr
 import llranalysis.error as error
 import llranalysis.standard as standard
 import llranalysis.utils as utils

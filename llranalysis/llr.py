@@ -7,7 +7,6 @@ import llranalysis.utils as utils
 import llranalysis.standard as standard
 import llranalysis.doubleGaussian as dg
 from scipy.interpolate import interp1d
-from scipy.interpolate import InterpolatedUnivariateSpline
 import llranalysis.error as error
 import llranalysis.Thermo as thermo
 

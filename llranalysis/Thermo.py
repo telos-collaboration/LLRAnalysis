@@ -8,7 +8,6 @@ from llranalysis import llr
 import llranalysis.error as error
 from scipy.interpolate import interp1d
 from scipy.interpolate import InterpolatedUnivariateSpline
-import matplotlib as mpl
 
 
 def find_critical_region(E, b):

@@ -1,5 +1,4 @@
 import yaml
-import os
 import numpy as np
 
 

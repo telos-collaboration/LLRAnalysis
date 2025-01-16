@@ -1062,6 +1062,14 @@ def obs_boot(folder, n_repeat, num_samples, error_type):
     Cuc_err = error.calculate_error(Cuc, num_samples, error_type)
     Bvc_err = error.calculate_error(Bvc, num_samples, error_type)
     Xlpc_err = error.calculate_error(Xlpc, num_samples, error_type)
+
+    bc_Xlp = bc_Xlp.mean()
+    bc_Cu = bc_Cu.mean()
+    bc_Bv = bc_Bv.mean()
+    Cuc = Cuc.mean()
+    Bvc = Bvc.mean()
+    Xlpc = Xlpc.mean()
+
     pd.DataFrame(
         data={
             "b_Xlp": bc_Xlp,
@@ -1079,12 +1087,6 @@ def obs_boot(folder, n_repeat, num_samples, error_type):
         },
         index=[0],
     ).to_csv(folder + "CSV/critical.csv")
-    bc_Xlp = bc_Xlp.mean()
-    bc_Cu = bc_Cu.mean()
-    bc_Bv = bc_Bv.mean()
-    Cuc = Cuc.mean()
-    Bvc = Bvc.mean()
-    Xlpc = Xlpc.mean()
 
 
 def final_boot(folder, n_repeat, num_samples, error_type):
@@ -1156,7 +1158,7 @@ def prepare_all(folder):
             eval(info_df["IS_b"][0]),
             folder,
         )
-        return
+
     betas = np.linspace(
         eval(info_df["betas"][0])[0],
         eval(info_df["betas"][0])[1],

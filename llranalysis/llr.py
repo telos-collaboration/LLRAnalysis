@@ -812,7 +812,7 @@ def free_energy_df(boot_folder, n_repeats, num_samples, error_type):
                 "E_Pb": [list(xs[i, :])],
                 "Pb": [list(ys[i, :])],
             }
-        ).to_csv(f"{boot_folder}{i}/CSV/F.csv")
+        ).to_csv(f"{boot_folder}{i}/CSV/F.csv", index=False)
 
     F_err = error.calculate_error_set(F, num_samples, error_type)
     T_err = error.calculate_error_set(T, num_samples, error_type)
@@ -871,7 +871,7 @@ def free_energy_df(boot_folder, n_repeats, num_samples, error_type):
             "Sigma": sigma,
             "Sigma_err": sigma_err,
         }
-    ).to_csv(f"{boot_folder}CSV/F.csv")
+    ).to_csv(f"{boot_folder}CSV/F.csv", index=False)
 
 
 def pre_dat(folder, V, up_min, up_max, N_intervals, betas, location):
@@ -941,7 +941,7 @@ def obs_boot(folder, n_repeat, num_samples, error_type):
             "lp_err": lp_err,
             "Xlp_err": Xlp_err,
         }
-    ).to_csv(folder + "CSV/comparison.csv")
+    ).to_csv(folder + "CSV/comparison.csv", index=False)
 
     b = np.array([])
     bc_Xlp = np.array([])
@@ -1002,7 +1002,7 @@ def obs_boot(folder, n_repeat, num_samples, error_type):
             "lp_err": lp_err,
             "Xlp_err": Xlp_err,
         }
-    ).to_csv(folder + "CSV/obs.csv")
+    ).to_csv(folder + "CSV/obs.csv", index=False)
 
     b = np.array([])
     bc_Cu = np.array([])
@@ -1054,7 +1054,7 @@ def obs_boot(folder, n_repeat, num_samples, error_type):
             "Cu_err": Cu_err,
             "Bv_err": Bv_err,
         }
-    ).to_csv(folder + "CSV/obs_critical.csv")
+    ).to_csv(folder + "CSV/obs_critical.csv", index=False)
 
     bc_Xlp_err = error.calculate_error(bc_Xlp, num_samples, error_type)
     bc_Cu_err = error.calculate_error(bc_Cu, num_samples, error_type)
@@ -1086,7 +1086,7 @@ def obs_boot(folder, n_repeat, num_samples, error_type):
             "Bv_err": Bvc_err,
         },
         index=[0],
-    ).to_csv(folder + "CSV/critical.csv")
+    ).to_csv(folder + "CSV/critical.csv", index=False)
 
 
 def final_boot(folder, n_repeat, num_samples, error_type):
